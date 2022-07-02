@@ -24,9 +24,14 @@ void refreshSourceSettings(obs_source_t *s)
 		return;
 	}
 
+	// Applying empty settings before reapplying the original settings
+	// helps with forcing a refresh of the browser source type
 	obs_data_t *data = obs_source_get_settings(s);
+	obs_data_t *emptyData = obs_data_create();
+	obs_source_update(s, emptyData);
 	obs_source_update(s, data);
 	obs_data_release(data);
+	obs_data_release(emptyData);
 }
 
 bool MacroActionSource::PerformAction()
