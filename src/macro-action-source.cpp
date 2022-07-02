@@ -99,7 +99,7 @@ static inline void populateActionSelection(QComboBox *list)
 			list->setItemData(
 				list->count() - 1,
 				obs_module_text(
-					"AdvSceneSwitcher.action.source.type.refreshSettings.tip"),
+					"AdvSceneSwitcher.action.source.type.refreshSettings.tooltip"),
 				Qt::ToolTipRole);
 		}
 	}
