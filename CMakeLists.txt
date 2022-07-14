@@ -1,12 +1,14 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.18)
 project(advanced-scene-switcher)
+
+find_package(Qt5Widgets)
+
+set(CMAKE_AUTOMOC ON)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RELWITHDEBINFO)
 endif()
 
-add_library(advanced-scene-switcher MODULE)
-add_library(OBS::advanced-scene-switcher ALIAS advanced-scene-switcher)
 add_definitions(-DASIO_STANDALONE)
 
 if(CMAKE_COMPILER_IS_GNUCC
@@ -38,27 +40,6 @@ elseif(MSVC)
                   -D_CRT_NONSTDC_NO_WARNINGS)
 endif()
 
-if(BUILD_QT EQUAL 5)
-  find_package(Qt5 COMPONENTS Widgets REQUIRED)
-  
-  target_link_libraries(advanced-scene-switcher PRIVATE Qt5::Widgets Qt5::GuiPrivate)
-
-  set_target_properties(
-    advanced-scene-switcher
-    PROPERTIES AUTOMOC ON
-               AUTOUIC ON
-               AUTOUIC_SEARCH_PATHS "forms")
-			   
-  target_include_directories(
-  advanced-scene-switcher PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
-                                  "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"
-								  "${CMAKE_CURRENT_SOURCE_DIR}/deps/asio/asio/include"
-								  "${CMAKE_CURRENT_SOURCE_DIR}/deps/websocketpp")
-							   
-elseif(BUILD_QT EQUAL 6)
-  message(FATAL_ERROR "OBS: Building with Qt6 not supported yet.")
-endif()
-
 # Generate version info
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 include(GetGitRevisionDescription)
@@ -68,7 +49,9 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cpp.in"
                "${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp" @ONLY)
 
 # The plugin sources
-target_sources(advanced-scene-switcher PRIVATE src/headers/advanced-scene-switcher.hpp
+set(advanced-scene-switcher_HEADERS
+    ${advanced-scene-switcher_HEADERS}
+    src/headers/advanced-scene-switcher.hpp
     src/headers/switcher-data-structs.hpp
     src/headers/scene-group.hpp
     src/headers/scene-trigger.hpp
@@ -87,6 +70,7 @@ target_sources(advanced-scene-switcher PRIVATE src/headers/advanced-scene-switch
     src/headers/switch-sequence.hpp
     src/headers/switch-video.hpp
     src/headers/switch-generic.hpp
+    src/headers/macro-action.hpp
     src/headers/macro-action-edit.hpp
     src/headers/macro-action-audio.hpp
     src/headers/macro-action-file.hpp
@@ -95,21 +79,27 @@ target_sources(advanced-scene-switcher PRIVATE src/headers/advanced-scene-switch
     src/headers/macro-action-macro.hpp
     src/headers/macro-action-media.hpp
     src/headers/macro-action-plugin-state.hpp
-    src/headers/macro-action-preview-scene.hpp
+    src/headers/macro-action-profile.hpp
+    src/headers/macro-action-random.hpp
     src/headers/macro-action-recording.hpp
     src/headers/macro-action-replay-buffer.hpp
     src/headers/macro-action-run.hpp
+    src/headers/macro-action-scene-collection.hpp
     src/headers/macro-action-scene-order.hpp
-    src/headers/macro-action-scene-swap.hpp
     src/headers/macro-action-scene-switch.hpp
     src/headers/macro-action-scene-transform.hpp
     src/headers/macro-action-scene-visibility.hpp
+    src/headers/macro-action-screenshot.hpp
+    src/headers/macro-action-sequence.hpp
     src/headers/macro-action-source.hpp
     src/headers/macro-action-streaming.hpp
+    src/headers/macro-action-studio-mode.hpp
+    src/headers/macro-action-systray.hpp
     src/headers/macro-action-timer.hpp
     src/headers/macro-action-transition.hpp
     src/headers/macro-action-virtual-cam.hpp
     src/headers/macro-action-wait.hpp
+    src/headers/macro-condition.hpp
     src/headers/macro-condition-edit.hpp
     src/headers/macro-condition-audio.hpp
     src/headers/macro-condition-cursor.hpp
@@ -120,25 +110,33 @@ target_sources(advanced-scene-switcher PRIVATE src/headers/advanced-scene-switch
     src/headers/macro-condition-idle.hpp
     src/headers/macro-condition-macro.hpp
     src/headers/macro-condition-media.hpp
+    src/headers/macro-condition-obs-stats.hpp
     src/headers/macro-condition-plugin-state.hpp
     src/headers/macro-condition-process.hpp
+    src/headers/macro-condition-profile.hpp
     src/headers/macro-condition-recording.hpp
     src/headers/macro-condition-replay-buffer.hpp
     src/headers/macro-condition-scene-order.hpp
     src/headers/macro-condition-scene-transform.hpp
+    src/headers/macro-condition-scene-visibility.hpp
     src/headers/macro-condition-scene.hpp
     src/headers/macro-condition-source.hpp
     src/headers/macro-condition-streaming.hpp
+    src/headers/macro-condition-studio-mode.hpp
     src/headers/macro-condition-timer.hpp
     src/headers/macro-condition-transition.hpp
     src/headers/macro-condition-virtual-cam.hpp
     src/headers/macro-condition-window.hpp
     src/headers/macro.hpp
-    src/headers/macro-controls.hpp
+    src/headers/macro-ref.hpp
+    src/headers/macro-list-entry-widget.hpp
+    src/headers/macro-properties.hpp
     src/headers/macro-segment.hpp
+    src/headers/macro-segment-list.hpp
     src/headers/macro-selection.hpp
     src/headers/curl-helper.hpp
     src/headers/hotkey.hpp
+    src/headers/scene-item-selection.hpp
     src/headers/scene-selection.hpp
     src/headers/screenshot-helper.hpp
     src/headers/transition-selection.hpp
@@ -146,10 +144,15 @@ target_sources(advanced-scene-switcher PRIVATE src/headers/advanced-scene-switch
     src/headers/duration-control.hpp
     src/headers/file-selection.hpp
     src/headers/section.hpp
+    src/headers/status-control.hpp
     src/headers/platform-funcs.hpp
+    src/headers/resizing-text-edit.hpp
     src/headers/utility.hpp
     src/headers/volume-control.hpp
-    src/headers/version.h
+    src/headers/version.h)
+
+set(advanced-scene-switcher_SOURCES
+    ${advanced-scene-switcher_SOURCES}
     src/advanced-scene-switcher.cpp
     src/advanced-scene-switcher-module.c
     src/switcher-data-structs.cpp
@@ -174,6 +177,7 @@ target_sources(advanced-scene-switcher PRIVATE src/headers/advanced-scene-switch
     src/switch-audio.cpp
     src/switch-video.cpp
     src/switch-generic.cpp
+    src/macro-action.cpp
     src/macro-action-edit.cpp
     src/macro-action-audio.cpp
     src/macro-action-file.cpp
@@ -182,21 +186,27 @@ target_sources(advanced-scene-switcher PRIVATE src/headers/advanced-scene-switch
     src/macro-action-macro.cpp
     src/macro-action-media.cpp
     src/macro-action-plugin-state.cpp
-    src/macro-action-preview-scene.cpp
+    src/macro-action-profile.cpp
+    src/macro-action-random.cpp
     src/macro-action-recording.cpp
     src/macro-action-replay-buffer.cpp
     src/macro-action-run.cpp
+    src/macro-action-scene-collection.cpp
     src/macro-action-scene-order.cpp
-    src/macro-action-scene-swap.cpp
     src/macro-action-scene-switch.cpp
     src/macro-action-scene-transform.cpp
     src/macro-action-scene-visibility.cpp
+    src/macro-action-screenshot.cpp
+    src/macro-action-sequence.cpp
     src/macro-action-source.cpp
     src/macro-action-streaming.cpp
+    src/macro-action-studio-mode.cpp
+    src/macro-action-systray.cpp
     src/macro-action-timer.cpp
     src/macro-action-transition.cpp
     src/macro-action-virtual-cam.cpp
     src/macro-action-wait.cpp
+    src/macro-condition.cpp
     src/macro-condition-edit.cpp
     src/macro-condition-audio.cpp
     src/macro-condition-cursor.cpp
@@ -207,35 +217,49 @@ target_sources(advanced-scene-switcher PRIVATE src/headers/advanced-scene-switch
     src/macro-condition-idle.cpp
     src/macro-condition-macro.cpp
     src/macro-condition-media.cpp
+    src/macro-condition-obs-stats.cpp
     src/macro-condition-plugin-state.cpp
     src/macro-condition-process.cpp
+    src/macro-condition-profile.cpp
     src/macro-condition-recording.cpp
     src/macro-condition-replay-buffer.cpp
     src/macro-condition-scene-order.cpp
     src/macro-condition-scene-transform.cpp
+    src/macro-condition-scene-visibility.cpp
     src/macro-condition-scene.cpp
     src/macro-condition-source.cpp
     src/macro-condition-streaming.cpp
+    src/macro-condition-studio-mode.cpp
     src/macro-condition-timer.cpp
     src/macro-condition-transition.cpp
     src/macro-condition-virtual-cam.cpp
     src/macro-condition-window.cpp
     src/macro.cpp
-    src/macro-controls.cpp
+    src/macro-ref.cpp
+    src/macro-list-entry-widget.cpp
+    src/macro-properties.cpp
     src/macro-segment.cpp
+    src/macro-segment-list.cpp
     src/macro-selection.cpp
     src/macro-tab.cpp
     src/curl-helper.cpp
+    src/scene-item-selection.cpp
     src/scene-selection.cpp
     src/screenshot-helper.cpp
     src/transition-selection.cpp
     src/name-dialog.cpp
+    src/resizing-text-edit.cpp
     src/duration-control.cpp
+    src/status-control.cpp
     src/section.cpp
     src/utility.cpp
     src/volume-control.cpp
     src/version.cpp)
-	
+
+add_library(advanced-scene-switcher MODULE
+	${advanced-scene-switcher_HEADERS}
+	${advanced-scene-switcher_SOURCES})
+
 # Windows installer
 if(WIN32)
   get_filename_component(ISS_PLUGIN_FILES_DIR
@@ -320,7 +344,7 @@ endif()
 if(APPLE)
   find_library(COCOA Cocoa)
   mark_as_advanced(COCOA)
-  target_link_libraries(advanced-scene-switcher PRIVATE ${COCOA})
+  # target_link_libraries(advanced-scene-switcher PRIVATE ${COCOA})
 endif()
 
 if(UNIX AND NOT APPLE)
@@ -354,6 +378,10 @@ else()
   set(advanced-scene-switcher_PLATFORM_LIBS Xss ${PROCPS_LIBRARY})
 endif()
 
+# asio and websocketpp
+add_definitions(-DASIO_STANDALONE)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/deps/asio/asio/include"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/deps/websocketpp")
 if(WIN32)
   add_definitions(-D_WEBSOCKETPP_CPP11_STL_)
 endif()
@@ -395,11 +423,14 @@ if(BUILD_OUT_OF_TREE)
   endif()
 else()
   # In tree build
-  target_link_libraries(advanced-scene-switcher PRIVATE OBS::libobs OBS::frontend-api)
+target_link_libraries(advanced-scene-switcher
+		obs-frontend-api
+		Qt5::Widgets
+		libobs ${COCOA})
 
-  target_compile_features(advanced-scene-switcher PRIVATE cxx_std_17)
+target_include_directories(advanced-scene-switcher PRIVATE
+        "${CMAKE_SOURCE_DIR}/UI/obs-frontend-api")
+set_target_properties(advanced-scene-switcher PROPERTIES FOLDER "plugins/SceneSwitcher" PREFIX "")
+install_obs_plugin_with_data(advanced-scene-switcher data)
 
-  set_target_properties(advanced-scene-switcher PROPERTIES FOLDER "plugins/SceneSwitcher" PREFIX "")
-
-  setup_plugin_target(advanced-scene-switcher)
 endif()
